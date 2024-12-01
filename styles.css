@@ -1,0 +1,40 @@
+body{ background-color: rgb(255, 255, 255);
+}
+  h1{
+  font-style: normal; color: rgb(54, 4, 171);
+  }
+  h2{
+  font-style: normal; color: rgb(25, 4, 160);
+  }
+  h3 {
+    font-style: normal; color: rgb(196, 32, 119);
+  }
+  h4 {
+    font-style: normal; color: darkblue;
+  }
+  fieldset legend {
+    color: blue;
+  }
+  fieldset {
+    border-color: blue;
+  }
+ input {
+ border-color: blueviolet;
+ }
+table{
+  border-color: rgb(255, 255, 255);
+  background-color: rgb(59, 59, 83);
+  font-style: normal; color: aliceblue;
+}
+
+input[type="submit"] {
+  font-size: medium;
+  background-color: #4CAF50;
+  color: #fff;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+

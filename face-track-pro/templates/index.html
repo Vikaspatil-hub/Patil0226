@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FaceTrack Pro - Smart Attendance System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-eye"></i>
+                    <h1>FaceTrack Pro</h1>
+                </div>
+                <nav class="nav">
+                    <a href="/" class="nav-link active">Dashboard</a>
+                    <a href="/admin" class="nav-link">Admin Panel</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <div class="container">
+            <!-- System Status -->
+            <div class="status-bar">
+                <div class="status-item">
+                    <span id="systemStatus" class="status-indicator offline"></span>
+                    <span>System Status: <span id="statusText">Offline</span></span>
+                </div>
+                <div class="status-item">
+                    <i class="fas fa-calendar"></i>
+                    <span id="currentDateTime"></span>
+                </div>
+            </div>
+
+            <div class="dashboard-grid">
+                <!-- Video Feed Section -->
+                <div class="video-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-video"></i> Live Camera Feed</h2>
+                            <div class="camera-controls">
+                                <button id="startCamera" class="btn btn-primary">
+                                    <i class="fas fa-play"></i> Start Camera
+                                </button>
+                                <button id="stopCamera" class="btn btn-secondary" disabled>
+                                    <i class="fas fa-pause"></i> Stop Camera
+                                </button>
+                            </div>
+                        </div>
+                        <div class="video-container">
+                            <img id="videoFeed" src="" alt="Video Feed" style="display: none;">
+                            <div id="videoPlaceholder" class="video-placeholder">
+                                <i class="fas fa-video-slash"></i>
+                                <p>Camera is offline</p>
+                                <p>Click "Start Camera" to begin face detection</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Statistics Section -->
+                <div class="stats-section">
+                    <!-- Quick Stats -->
+                    <div class="stats-grid">
+                        <div class="stat-card present">
+                            <div class="stat-icon">
+                                <i class="fas fa-user-check"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3 id="presentCount">0</h3>
+                                <p>Present Today</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card absent">
+                            <div class="stat-icon">
+                                <i class="fas fa-user-times"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3 id="absentCount">0</h3>
+                                <p>Absent Today</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card late">
+                            <div class="stat-icon">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3 id="lateCount">0</h3>
+                                <p>Late Arrivals</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card total">
+                            <div class="stat-icon">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3 id="totalStudents">0</h3>
+                                <p>Total Students</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Attendance Rate -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-chart-pie"></i> Attendance Rate</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="attendance-rate">
+                                <div class="rate-circle">
+                                    <canvas id="attendanceChart" width="150" height="150"></canvas>
+                                    <div class="rate-text">
+                                        <span id="attendanceRate">0%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Today's Attendance -->
+                <div class="attendance-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-list"></i> Today's Attendance</h3>
+                            <div class="filter-controls">
+                                <button id="refreshAttendance" class="btn btn-icon">
+                                    <i class="fas fa-sync"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="attendance-list" id="attendanceList">
+                                <div class="no-data">
+                                    <i class="fas fa-clipboard-list"></i>
+                                    <p>No attendance records for today</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="activity-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-history"></i> Recent Activity</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="activity-list" id="activityList">
+                                <div class="no-data">
+                                    <i class="fas fa-bell-slash"></i>
+                                    <p>No recent activity</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Scripts -->
+    <script>
+        let cameraActive = false;
+        let attendanceChart = null;
+
+        // Initialize the dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+            loadAttendanceStats();
+            setInterval(loadAttendanceStats, 10000); // Update every 10 seconds
+            initializeEventListeners();
+        });
+
+        function updateDateTime() {
+            const now = new Date();
+            const options = { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric', 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                second: '2-digit' 
+            };
+            document.getElementById('currentDateTime').textContent = now.toLocaleDateString('en-US', options);
+        }
+
+        function initializeEventListeners() {
+            document.getElementById('startCamera').addEventListener('click', startCamera);
+            document.getElementById('stopCamera').addEventListener('click', stopCamera);
+            document.getElementById('refreshAttendance').addEventListener('click', loadAttendanceStats);
+        }
+
+        function startCamera() {
+            fetch('/start_camera')
+                .then(response => response.json())
+                .then(data => {
+                    cameraActive = true;
+                    document.getElementById('videoFeed').src = '/video_feed';
+                    document.getElementById('videoFeed').style.display = 'block';
+                    document.getElementById('videoPlaceholder').style.display = 'none';
+                    document.getElementById('startCamera').disabled = true;
+                    document.getElementById('stopCamera').disabled = false;
+                    updateSystemStatus('online');
+                })
+                .catch(error => {
+                    console.error('Error starting camera:', error);
+                    alert('Error starting camera. Please check your camera connection.');
+                });
+        }
+
+        function stopCamera() {
+            fetch('/stop_camera')
+                .then(response => response.json())
+                .then(data => {
+                    cameraActive = false;
+                    document.getElementById('videoFeed').style.display = 'none';
+                    document.getElementById('videoPlaceholder').style.display = 'flex';
+                    document.getElementById('startCamera').disabled = false;
+                    document.getElementById('stopCamera').disabled = true;
+                    updateSystemStatus('offline');
+                })
+                .catch(error => {
+                    console.error('Error stopping camera:', error);
+                });
+        }
+
+        function updateSystemStatus(status) {
+            const statusIndicator = document.getElementById('systemStatus');
+            const statusText = document.getElementById('statusText');
+            
+            statusIndicator.className = `status-indicator ${status}`;
+            statusText.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+        }
+
+        function loadAttendanceStats() {
+            fetch('/attendance_stats')
+                .then(response => response.json())
+                .then(data => {
+                    updateStats(data);
+                    updateAttendanceList(data.today_attendance);
+                    updateActivityList(data.recent_attendance);
+                    updateAttendanceChart(data.attendance_rate);
+                })
+                .catch(error => {
+                    console.error('Error loading attendance stats:', error);
+                });
+        }
+
+        function updateStats(data) {
+            document.getElementById('presentCount').textContent = data.present_today;
+            document.getElementById('absentCount').textContent = data.absent_today;
+            document.getElementById('lateCount').textContent = data.late_today;
+            document.getElementById('totalStudents').textContent = data.total_students;
+        }
+
+        function updateAttendanceList(attendanceData) {
+            const listContainer = document.getElementById('attendanceList');
+            
+            if (attendanceData.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="no-data">
+                        <i class="fas fa-clipboard-list"></i>
+                        <p>No attendance records for today</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const listHTML = attendanceData.map(record => `
+                <div class="attendance-item">
+                    <div class="student-info">
+                        <div class="student-avatar">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <div class="student-details">
+                            <h4>${record.Name}</h4>
+                            <p>Status: ${record.Status}</p>
+                        </div>
+                    </div>
+                    <div class="attendance-time">
+                        <span class="time">${record.Time}</span>
+                        <span class="date">${record.Date}</span>
+                    </div>
+                </div>
+            `).join('');
+
+            listContainer.innerHTML = listHTML;
+        }
+
+        function updateActivityList(activityData) {
+            const listContainer = document.getElementById('activityList');
+            
+            if (activityData.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="no-data">
+                        <i class="fas fa-bell-slash"></i>
+                        <p>No recent activity</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const activityHTML = activityData.slice(-5).map(record => `
+                <div class="activity-item">
+                    <div class="activity-icon">
+                        <i class="fas fa-user-check"></i>
+                    </div>
+                    <div class="activity-content">
+                        <p><strong>${record.Name}</strong> marked present</p>
+                        <span class="activity-time">${record.Date} at ${record.Time}</span>
+                    </div>
+                </div>
+            `).join('');
+
+            listContainer.innerHTML = activityHTML;
+        }
+
+        function updateAttendanceChart(rate) {
+            const ctx = document.getElementById('attendanceChart').getContext('2d');
+            
+            if (attendanceChart) {
+                attendanceChart.destroy();
+            }
+
+            attendanceChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    datasets: [{
+                        data: [rate, 100 - rate],
+                        backgroundColor: ['#4CAF50', '#f0f0f0'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: false,
+                    maintainAspectRatio: false,
+                    cutout: '80%',
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+
+            document.getElementById('attendanceRate').textContent = `${Math.round(rate)}%`;
+        }
+
+        // Handle video feed errors
+        document.getElementById('videoFeed').addEventListener('error', function() {
+            if (cameraActive) {
+                setTimeout(() => {
+                    this.src = '/video_feed?' + new Date().getTime();
+                }, 1000);
+            }
+        });
+    </script>
+</body>
+</html>

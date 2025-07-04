@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - FaceTrack Pro</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-eye"></i>
+                    <h1>FaceTrack Pro</h1>
+                </div>
+                <nav class="nav">
+                    <a href="/" class="nav-link">Dashboard</a>
+                    <a href="/admin" class="nav-link active">Admin Panel</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <div class="container">
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="flash-messages">
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }}">
+                                <i class="fas fa-{{ 'check-circle' if category == 'success' else 'exclamation-triangle' }}"></i>
+                                {{ message }}
+                                <button class="alert-close" onclick="this.parentElement.remove()">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            <div class="admin-grid">
+                <!-- Student Registration -->
+                <div class="admin-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-user-plus"></i> Register New Student</h2>
+                        </div>
+                        <div class="card-body">
+                            <form action="/register_student" method="post" enctype="multipart/form-data" class="registration-form">
+                                <div class="form-group">
+                                    <label for="student_name">
+                                        <i class="fas fa-user"></i> Student Name
+                                    </label>
+                                    <input type="text" id="student_name" name="student_name" required placeholder="Enter full name">
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="student_usn">
+                                        <i class="fas fa-id-card"></i> USN / Student ID
+                                    </label>
+                                    <input type="text" id="student_usn" name="student_usn" required placeholder="Enter USN or Student ID">
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="student_images">
+                                        <i class="fas fa-camera"></i> Face Images (3-5 recommended)
+                                    </label>
+                                    <input type="file" id="student_images" name="images" multiple accept="image/*" required>
+                                    <div id="imagePreview" class="image-preview"></div>
+                                </div>
+
+                                <button type="submit" class="btn btn-primary btn-block">
+                                    <i class="fas fa-save"></i> Register Student
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Controls -->
+                <div class="admin-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-cogs"></i> System Controls</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="control-grid">
+                                <a href="/retrain_model" class="control-btn">
+                                    <i class="fas fa-brain"></i>
+                                    <span>Retrain Model</span>
+                                </a>
+                                <a href="/download_attendance" class="control-btn">
+                                    <i class="fas fa-download"></i>
+                                    <span>Download Data</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- System Status -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-info-circle"></i> System Status</h3>
+                        </div>
+                        <div class="card-body">
+                            <p>Total Students: {{ students|length }}</p>
+                            <p>Model Status: Ready</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Registered Students -->
+                <div class="admin-section full-width">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-users"></i> Registered Students ({{ students|length }})</h2>
+                        </div>
+                        <div class="card-body">
+                            {% if students %}
+                                <div class="students-grid">
+                                    {% for student in students %}
+                                        <div class="student-card">
+                                            <div class="student-avatar">
+                                                <i class="fas fa-user"></i>
+                                            </div>
+                                            <div class="student-info">
+                                                <h4>{{ student.name }}</h4>
+                                                <p>{{ student.images }} images</p>
+                                                <span class="student-folder">{{ student.folder }}</span>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="no-data">
+                                    <i class="fas fa-user-plus"></i>
+                                    <h3>No Students Registered</h3>
+                                    <p>Start by registering your first student using the form above.</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Scripts -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const fileInput = document.getElementById('student_images');
+            const preview = document.getElementById('imagePreview');
+
+            fileInput.addEventListener('change', function() {
+                preview.innerHTML = '';
+                
+                if (this.files.length > 5) {
+                    alert('Please select maximum 5 images');
+                    this.value = '';
+                    return;
+                }
+
+                Array.from(this.files).forEach((file, index) => {
+                    if (file.type.startsWith('image/')) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            const imageDiv = document.createElement('div');
+                            imageDiv.className = 'preview-image';
+                            imageDiv.innerHTML = `<img src="${e.target.result}" alt="Preview ${index + 1}">`;
+                            preview.appendChild(imageDiv);
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+            });
+        });
+
+        setTimeout(function() {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                alert.style.opacity = '0';
+                setTimeout(() => alert.remove(), 500);
+            });
+        }, 5000);
+    </script>
+</body>
+</html>
